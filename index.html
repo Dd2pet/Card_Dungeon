@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0c0a08">
+<title>Card Dungeon 7.7</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<div id="__errdiv" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000;color:#f66;font-size:12px;padding:16px;z-index:99999;overflow:auto;white-space:pre-wrap;font-family:monospace;"></div>
+<script>
+window.addEventListener('error', function(e) {
+  var d = document.getElementById('__errdiv');
+  d.style.display = 'block';
+  d.textContent += '[ERROR] ' + e.message + '\n  ' + e.filename + ':' + e.lineno + '\n\n';
+});
+window.addEventListener('unhandledrejection', function(e) {
+  var d = document.getElementById('__errdiv');
+  d.style.display = 'block';
+  d.textContent += '[PROMISE] ' + String(e.reason) + '\n\n';
+});
+</script>
+
+<!-- TITLE -->
+<div class="screen active" id="title">
+  <div class="t-em">⚔️</div>
+  <div class="t-logo">CARD DUNGEON</div>
+  <div class="t-sub">VERSION 7.7</div>
+  <div class="t-divider"></div>
+  <div class="slot-btns" id="slot-btns"></div>
+  <div class="sm-title-divider" style="margin:6px 0 4px;"></div>
+  <div class="sm-file-btns" id="sm-title-btns">
+    <button class="sm-btn sm-btn-save" id="sm-title-save" title="Сохранить текущую игру в JSON-файл">📜 Сохранить свиток</button>
+    <button class="sm-btn sm-btn-load" id="sm-title-load" title="Загрузить игру из JSON-файла">🗝️ Открыть свиток</button>
+  </div>
+  <div id="new-hero-form">
+    <input class="name-inp" id="hero-name-inp" placeholder="Имя героя" maxlength="14" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="cls-row" id="cls-row"></div>
+    <button class="btn-go" id="create-hero-btn">▶ Создать</button>
+    <button class="btn-cancel" id="cancel-new-hero">Отмена</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="game">
+  <div class="top-bar">
+    <button id="btn-to-menu" onclick="SessionManager.returnToMainMenu()" style="background:none;border:1px solid var(--bord);border-radius:6px;color:var(--muted);font-size:10px;font-family:inherit;padding:5px 8px;cursor:pointer;letter-spacing:.5px;min-height:32px;flex-shrink:0;" title="Выйти в главное меню">🚪 Меню</button>
+    <button id="btn-save-file" onclick="SaveManager.saveToFile()" style="background:linear-gradient(135deg,rgba(0,50,100,.8),rgba(41,128,185,.6));border:1px solid rgba(41,128,185,.6);border-radius:6px;color:#5dade2;font-size:10px;font-family:inherit;padding:5px 9px;cursor:pointer;letter-spacing:.5px;min-height:32px;flex-shrink:0;font-weight:700;transition:all .15s;" title="Сохранить игру в файл (Save As)">💾 Сохр.</button>
+    <div class="tbar-title" id="g-zone" style="flex:1;text-align:center;">🌲 Лес</div>
+    <div class="gold-d">💰 <span id="g-gold">0</span></div>
+  </div>
+  <!-- Zone selector strip -->
+  <div class="zone-strip" id="zone-strip"></div>
+  <div class="arena" id="arena">
+    <!-- Monster card -->
+    <div class="card card-m" id="card-m">
+      <div class="c-head">
+        <div class="c-av" id="m-av">👹</div>
+        <div style="flex:1;min-width:0;">
+          <div class="c-name" id="m-name">Гоблин</div>
+          <div class="c-lvl" id="m-lvl">Ур. 1</div>
+        </div>
+        <div class="c-badge bm">враг</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-lbl"><span>HP</span><span id="m-hpt">50/50</span></div>
+        <div class="bar-track"><div class="bar-fill hp-bar" id="m-hpb" style="width:100%"></div></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat"><div class="sl">ATK</div><div class="sv" id="m-atk">8</div></div>
+        <div class="stat"><div class="sl">DEF</div><div class="sv" id="m-def">3</div></div>
+        <div class="stat"><div class="sl">SPD</div><div class="sv" id="m-spd">4</div></div>
+      </div>
+      <!-- Monster status effects -->
+      <div class="status-row" id="m-statuses"></div>
+    </div>
+
+    <div class="vs">⚔ VS ⚔</div>
+
+    <!-- Player card -->
+    <div class="card card-p" id="card-p">
+      <div class="c-head">
+        <div class="c-av" id="p-av">🛡️</div>
+        <div style="flex:1;min-width:0;">
+          <div class="c-name" id="p-name">Герой</div>
+          <div class="c-lvl" id="p-lvl">Ур. 1 · <span id="p-xp-short">0/100 XP</span></div>
+        </div>
+        <div class="c-badge bp" id="p-badge">герой</div>
+      </div>
+
+      <!-- HP bar -->
+      <div class="bar-row">
+        <div class="bar-lbl">
+          <span>HP</span>
+          <span id="p-hpt">100/100</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill hp-bar" id="p-hpb" style="width:100%"></div></div>
+      </div>
+
+      <!-- MP bar -->
+      <div class="bar-row">
+        <div class="bar-lbl">
+          <span>MP</span>
+          <span id="p-mpt">50/50</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill mp-bar" id="p-mpb" style="width:100%"></div></div>
+      </div>
+
+      <!-- XP bar -->
+      <div class="bar-row">
+        <div class="bar-lbl">
+          <span>XP</span>
+          <span id="p-xpt">0/100</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill xp-bar" id="p-xpb" style="width:0%"></div></div>
+      </div>
+
+      <!-- Stats: 3 cols, numbers wrap if too long -->
+      <div class="stats-row">
+        <div class="stat"><div class="sl">ATK</div><div class="sv" id="p-atk">12</div></div>
+        <div class="stat"><div class="sl">DEF</div><div class="sv" id="p-def">5</div></div>
+        <div class="stat"><div class="sl">КРИТ</div><div class="sv" id="p-crit">10%</div></div>
+      </div>
+
+      <!-- Player status effects -->
+      <div class="status-row" id="p-statuses"></div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="act-btns">
+      <button class="act-btn b-atk" id="b-atk">
+        <span class="btn-ico">⚔</span>
+        <span class="btn-lbl">Атака</span>
+      </button>
+      <button class="act-btn b-ctr" id="b-ctr">
+        <span class="btn-ico">🛡</span>
+        <span class="btn-lbl">Контр</span>
+      </button>
+      <button class="act-btn b-skl" id="b-skl">
+        <span class="btn-ico">✨</span>
+        <span class="btn-lbl" id="b-skl-lbl">Умение</span>
+      </button>
+      <button class="act-btn b-itm" id="b-itm">
+        <span class="btn-ico">🎒</span>
+        <span class="btn-lbl">Предм</span>
+      </button>
+      <button class="act-btn b-fle" id="b-fle">🚪</button>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+  <nav class="nav" id="nav-game"></nav>
+</div>
+
+<!-- HERO TAB -->
+<div class="screen" id="hero-tab">
+  <div class="top-bar"><div class="tbar-title">🧙 Герой</div><div class="gold-d">💰 <span id="ht-gold">0</span></div></div>
+  <div class="scroll" id="hero-scroll"></div>
+  <nav class="nav" id="nav-hero"></nav>
+</div>
+
+<!-- INVENTORY TAB -->
+<div class="screen" id="inv-tab">
+  <div class="top-bar"><div class="tbar-title">🎒 Инвентарь</div><div class="gold-d">💰 <span id="it-gold">0</span></div></div>
+  <div style="padding:8px 14px 4px;flex-shrink:0;" id="inv-tabs-container">
+    <div class="inv-tabs" id="inv-tabs">
+      <button class="inv-tab on" data-cat="weapon"><span class="it-ico">⚔️</span>Оружие</button>
+      <button class="inv-tab" data-cat="armor"><span class="it-ico">🛡️</span>Броня</button>
+      <button class="inv-tab" data-cat="accessory"><span class="it-ico">💍</span>Укр</button>
+      <button class="inv-tab" data-cat="potion"><span class="it-ico">🧪</span>Зелья</button>
+      <button class="inv-tab" data-cat="material"><span class="it-ico">⛏️</span>Матер</button>
+      <button class="inv-tab" data-cat="herb"><span class="it-ico">🌿</span>Травы</button>
+    </div>
+  </div>
+  <div class="scroll" id="inv-scroll"></div>
+  <nav class="nav" id="nav-inv"></nav>
+</div>
+
+<!-- STATS TAB -->
+<div class="screen" id="stats-tab">
+  <div class="top-bar"><div class="tbar-title">📊 Статистика</div><div class="gold-d">💰 <span id="stt-gold">0</span></div></div>
+  <div class="scroll" id="stats-scroll"></div>
+  <nav class="nav" id="nav-stats"></nav>
+</div>
+
+<!-- GUILD TAB -->
+<div class="screen" id="guild-tab">
+  <div class="top-bar">
+    <div class="tbar-title">⚔️ Гильдия</div>
+    <div class="gold-d">💰 <span id="guild-gold">0</span></div>
+  </div>
+  <!-- rank bar injected by GuildRenderSystem -->
+  <div id="guild-rank-bar"></div>
+  <!-- sub-tabs: Board | Active | History | НПС | Наёмники | Рейды | Рейтинг -->
+  <div class="guild-tabs" id="guild-tabs">
+    <button class="guild-tab on" data-gtab="board"><span class="gt-ico">📋</span>Доска</button>
+    <button class="guild-tab" data-gtab="active"><span class="gt-ico">⚡</span>Активные</button>
+    <button class="guild-tab" data-gtab="recipes"><span class="gt-ico">📖</span>Рецепты</button>
+    <button class="guild-tab" data-gtab="rankup"><span class="gt-ico">🏆</span>Ранг↑</button>
+    <button class="guild-tab" data-gtab="npc"><span class="gt-ico">🏘️</span>НПС</button>
+    <button class="guild-tab" data-gtab="mercs"><span class="gt-ico">⚔️</span>Наёмники</button>
+    <button class="guild-tab" data-gtab="raids"><span class="gt-ico">🔥</span>Рейды</button>
+    <button class="guild-tab" data-gtab="ranking"><span class="gt-ico">🏆</span>Рейтинг</button>
+  </div>
+  <div class="blp-hint" id="guild-blp-hint"></div>
+  <div class="scroll" id="guild-scroll"></div>
+  <nav class="nav" id="nav-guild"></nav>
+</div>
+
+<!-- NPC TAB (hidden - content moved to Guild) -->
+<div class="screen" id="npc-tab" style="display:none!important">
+  <div class="scroll" id="npc-scroll"></div>
+  <nav class="nav" id="nav-npc"></nav>
+</div>
+
+<!-- SHOP TAB -->
+<div class="screen" id="shop-tab">
+  <div class="top-bar"><div class="tbar-title">🏪 Магазин</div><div class="gold-d">💰 <span id="sh-gold">0</span></div></div>
+  <div style="padding:8px 14px 4px;flex-shrink:0;">
+    <div class="inv-tabs" id="shop-tabs">
+      <button class="inv-tab on" data-shcat="buy"><span class="it-ico">🛒</span>Купить</button>
+      <button class="inv-tab" data-shcat="sell"><span class="it-ico">💸</span>Продать</button>
+      <button class="inv-tab" data-shcat="bank"><span class="it-ico">🏦</span>Банк</button>
+      <button class="inv-tab" data-shcat="basement" id="shop-tab-basement"><span class="it-ico">⛓️</span>Подвал</button>
+    </div>
+  </div>
+  <div class="eco-bar" id="shop-eco-bar" style="flex-shrink:0;"></div>
+  <div class="scroll" id="shop-scroll"></div>
+  <nav class="nav" id="nav-shop"></nav>
+</div>
+
+<!-- POTION PICKER OVERLAY -->
+<div class="overlay hide" id="potion-picker-ov">
+  <div class="loot-box" style="max-width:340px;">
+    <div class="lt-title" style="font-size:16px;margin-bottom:4px;">🎒 Выбрать предмет</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Нажмите на зелье для использования</div>
+    <div id="potion-picker-list" style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;margin-bottom:10px;"></div>
+    <button id="potion-picker-close" class="btn-cont" style="background:#1a1612;color:var(--muted);border:1px solid var(--bord);">Отмена</button>
+  </div>
+</div>
+
+<!-- SELL OVERLAY -->
+<div class="overlay hide" id="sell-ov">
+  <div class="sell-box">
+    <div class="sell-title">🗑️ Продать весь стак?</div>
+    <div id="sell-preview" class="sell-item-preview"></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Магазин выкупает по <span style="color:var(--red-lt)">12%</span> от стоимости</div>
+    <div id="sell-price-line" style="font-size:16px;font-weight:700;color:var(--gold-lt);margin-bottom:10px;"></div>
+    <button class="btn-sell-confirm" id="sell-confirm-btn">Продать</button>
+    <button class="btn-sell-cancel" id="sell-cancel-btn">Отмена</button>
+  </div>
+</div>
+
+<!-- PURIFY OVERLAY -->
+<div class="overlay hide" id="purify-ov">
+  <div class="purify-box">
+    <div class="purify-title">✨ Очищение проклятия</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Выбери предмет для очищения</div>
+    <div class="purify-list" id="purify-list"></div>
+    <button class="btn-purify-close" id="close-purify">Закрыть</button>
+  </div>
+</div>
+
+<!-- DIALOGUE OVERLAY -->
+<div class="overlay hide" id="dialogue-ov">
+  <div class="dialogue-box">
+    <div class="dlg-speaker">
+      <div class="dlg-av" id="dlg-av">🧙</div>
+      <div>
+        <div class="dlg-name" id="dlg-name">НПС</div>
+        <div class="dlg-title" id="dlg-title">Гильдия</div>
+      </div>
+    </div>
+    <div class="dlg-text" id="dlg-text">...</div>
+    <div class="dlg-choices" id="dlg-choices"></div>
+  </div>
+</div>
+
+<!-- LOOT OVERLAY -->
+<div class="overlay hide" id="loot-ov">
+  <div class="loot-box">
+    <div class="lt-title">⚔ Победа!</div>
+    <div class="ls-sub" id="l-mon">—</div>
+    <div class="lxp" id="l-xp">+0 XP</div>
+    <div class="lgold" id="l-gold">+0 💰</div>
+    <div id="l-pet-bonus" style="font-size:11px;color:#c084fc;margin-bottom:4px;min-height:14px;"></div>
+    <div class="litems" id="l-items"></div>
+    <button class="btn-cont" id="close-loot">Продолжить →</button>
+  </div>
+</div>
+
+<!-- DEATH OVERLAY -->
+<div class="death-ov" id="death-ov">
+  <div class="death-txt">💀 ПОГИБ</div>
+  <button class="btn-resp" id="respawn-btn">🔄 Возродиться</button>
+</div>
+
+<!-- LEVEL UP BANNER -->
+<div class="levelup-banner" id="levelup-banner">🎉 УРОВЕНЬ UP!</div>
+
+
+<!-- 1. Ядро (ни от чего не зависят) -->
+<script src="js/configs.js"></script>
+<script src="js/core/event-bus.js"></script>
+<script src="js/config.js"></script>
+<script src="js/factories/item-factory.js"></script>
+<script src="js/core/game-state.js"></script>
+<script src="js/core/save-service.js"></script>
+<script src="js/core/cleanup.js"></script>
+<!-- 2. Фабрики -->
+<script src="js/factories/monster-factory.js"></script>
+<script src="js/factories/quest-factory.js"></script>
+<!-- 3. Системы (порядок важен — зависимости между системами) -->
+<script src="js/systems/economy.js"></script>
+<script src="js/systems/inventory.js"></script>
+<script src="js/systems/npc.js"></script>
+<script src="js/systems/pet.js"></script>
+<script src="js/systems/slave.js"></script>
+<script src="js/systems/combat.js"></script>
+<script src="js/systems/world.js"></script>
+<script src="js/systems/quest.js"></script>
+<script src="js/systems/guild.js"></script>
+<script src="js/systems/merc.js"></script>
+<script src="js/systems/raid.js"></script>
+<script src="js/systems/ranking.js"></script>
+<script src="js/systems/gathering.js"></script>
+<script src="js/systems/crafting.js"></script>
+<script src="js/systems/enchant.js"></script>
+<script src="js/systems/cards.js"></script>
+<script src="js/systems/achievements.js"></script>
+<script src="js/systems/world-events.js"></script>
+<!-- 4. Классы -->
+<script src="js/classes/skill-definition.js"></script>
+<script src="js/classes/class-mechanics.js"></script>
+<script src="js/classes/subclass.js"></script>
+<script src="js/classes/class-modules.js"></script>
+<script src="js/classes/class-constraints.js"></script>
+<!-- 5. UI (зависит от всех систем) -->
+<script src="js/ui/ui-system.js"></script>
+<script src="js/ui/render-system.js"></script>
+<script src="js/ui/inventory-renderer.js"></script>
+<script src="js/ui/shop-renderer.js"></script>
+<script src="js/ui/npc-render.js"></script>
+<script src="js/ui/guild-render.js"></script>
+<script src="js/ui/progression-render.js"></script>
+<script src="js/ui/recipe-shop.js"></script>
+<script src="js/ui/rarity-system.js"></script>
+<script src="js/ui/nav.js"></script>
+<script src="js/ui/title.js"></script>
+<!-- 6. Патчи (monkey-patches применяются после всех объявлений) -->
+<script src="js/boot.js"></script>
+<!-- PET ENCOUNTER OVERLAY -->
+<div class="pet-overlay hide" id="pet-ov">
+  <div class="pet-box">
+    <div class="pet-encounter-title">✨ Дикое существо!</div>
+    <div class="pet-avatar-wrap">
+      <div class="pet-avatar" id="pet-av">🐺</div>
+      <div class="pet-rarity-ring" id="pet-rarity-ring"></div>
+    </div>
+    <div class="pet-encounter-name" id="pet-enc-name">Дикий волк</div>
+    <div class="pet-encounter-type" id="pet-enc-type">Ур.1 · Обычный</div>
+    <div class="pet-sat-bar">
+      <div class="pet-sat-label"><span>🍖 Сытость</span><span id="pet-sat-val">0%</span></div>
+      <div class="pet-sat-track"><div class="pet-sat-fill" id="pet-sat-fill" style="width:0%"></div></div>
+    </div>
+    <div class="pet-attempts" id="pet-attempts">Попыток поимки: 3/3</div>
+    <div id="pet-result-msg"></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Покорми существо чтобы повысить шанс поимки:</div>
+    <div class="pet-food-grid" id="pet-food-grid"></div>
+    <div class="pet-action-row">
+      <button class="pet-btn-catch" id="pet-catch-btn">🎯 Поймать</button>
+      <button class="pet-btn-flee" id="pet-flee-btn">🚪 Уйти</button>
+    </div>
+  </div>
+</div>
+
+<!-- GATHERING TAB SCREEN -->
+<div class="screen" id="gather-tab">
+  <div class="top-bar">
+    <div class="tbar-title">⛏️ Добыча ресурсов</div>
+    <div class="gold-d">💰 <span id="gt-gold">0</span></div>
+  </div>
+  <div class="scroll" id="gather-scroll">
+    <div id="gather-content"></div>
+  </div>
+  <nav class="nav" id="nav-gather"></nav>
+</div>
+
+<!-- GATHERING MINIGAME OVERLAY -->
+<div class="overlay hide" id="gather-ov" style="z-index:350">
+  <div id="gather-mg-box" style="background:var(--card);border:2px solid var(--gold);border-radius:14px;padding:18px 16px;max-width:340px;width:100%;text-align:center;max-height:90vh;overflow-y:auto;"></div>
+</div>
+
+<!-- CARD DETAIL OVERLAY -->
+<div class="card-detail-ov hide" id="card-detail-ov">
+  <div class="card-detail-box" id="card-detail-box">
+  </div>
+</div>
+
+<!-- ZONE BACKGROUND -->
+<div id="zone-bg">
+  <canvas id="zone-bg-canvas" style="opacity:0;"></canvas>
+</div>
+
+<!-- TITLE BG CARDS CONTAINER -->
+<div id="title-bg"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// TITLE SCREEN — ANIMATED CARD BACKGROUNDS
+// ════════════════════════════════════════════════════════════
+(function TitleBgSystem() {
+  const CARDS = [
+    { ico:'🐺', name:'Лесной волк',   rarity:'common',    rc:'#aaa',    glow:'#aaaaaa' },
+    { ico:'🐻', name:'Медведь',       rarity:'uncommon',  rc:'#6db86d', glow:'#6db86d' },
+    { ico:'👺', name:'Гоблин',        rarity:'common',    rc:'#aaa',    glow:'#aaaaaa' },
+    { ico:'🕷️',name:'Лесной паук',   rarity:'rare',      rc:'#4fa3e0', glow:'#4fa3e0' },
+    { ico:'🐉', name:'Дракон',        rarity:'legendary', rc:'#e0a030', glow:'#e0a030' },
+    { ico:'🦎', name:'Виверна',       rarity:'epic',      rc:'#b44fe0', glow:'#b44fe0' },
+    { ico:'🌿', name:'Лесной дух',    rarity:'rare',      rc:'#4fa3e0', glow:'#27ae60' },
+    { ico:'🧌', name:'Тролль',        rarity:'uncommon',  rc:'#6db86d', glow:'#6db86d' },
+    { ico:'💀', name:'Лич',           rarity:'epic',      rc:'#b44fe0', glow:'#cc44ff' },
+    { ico:'🐍', name:'Гидра',         rarity:'legendary', rc:'#e0a030', glow:'#e0a030' },
+    { ico:'🧛', name:'Вампир',        rarity:'rare',      rc:'#4fa3e0', glow:'#4fa3e0' },
+    { ico:'🧟', name:'Зомби',         rarity:'common',    rc:'#aaa',    glow:'#aaaaaa' },
+  ];
+
+  const RARITY_BORDER = {
+    common:    'rgba(160,160,160,.35)',
+    uncommon:  'rgba(109,184,109,.45)',
+    rare:      'rgba(79,163,224,.55)',
+    epic:      'rgba(180,79,224,.65)',
+    legendary: 'rgba(224,160,48,.7)',
+  };
+
+  let _slots = [];
+  let _running = false;
+  let _raf = null;
+
+  function _makeSlot(container, idx, total) {
+    const el = document.createElement('div');
+    el.className = 'tbg-card';
+
+    const cfg = CARDS[idx % CARDS.length];
+    const rim = RARITY_BORDER[cfg.rarity] || 'rgba(200,200,200,.3)';
+    el.style.borderColor = rim;
+    el.style.boxShadow = `0 8px 32px rgba(0,0,0,.7),0 0 24px ${cfg.glow}22`;
+
+    el.innerHTML = `
+      <div class="tbg-card-ico">${cfg.ico}</div>
+      <div class="tbg-card-name">${cfg.name}</div>
+      <div class="tbg-card-bar" style="background:linear-gradient(90deg,transparent,${cfg.glow}88,transparent);"></div>
+      <div class="tbg-card-rarity" style="color:${cfg.rc};border-color:${rim};">${cfg.rarity.toUpperCase()}</div>
+    `;
+
+    // Random layout
+    const side = idx % 2 === 0 ? 'left' : 'right';
+    const xBase = side === 'left'
+      ? (Math.random() * 0.25)          // 0–25% от левого края
+      : (0.65 + Math.random() * 0.25);  // 65–90% от левого края
+    const yBase = 0.05 + Math.random() * 0.82;
+
+    const rot = (Math.random() - 0.5) * 40;
+    const scale = 0.55 + Math.random() * 0.35;
+    const dur = 18 + Math.random() * 12;
+    const delay = Math.random() * dur;
+
+    el.dataset.x = xBase;
+    el.dataset.y = yBase;
+    el.dataset.rot = rot;
+    el.dataset.scale = scale;
+    el.dataset.dur = dur;
+    el.dataset.t = -delay;   // start offset
+
+    container.appendChild(el);
+    return el;
+  }
+
+  function _addGlows(container) {
+    const glowColors = ['#c9922a','#8e44ad','#2980b9','#27ae60'];
+    glowColors.forEach((c, i) => {
+      const g = document.createElement('div');
+      g.className = 'tbg-glow';
+      const sz = 180 + i * 60;
+      g.style.cssText = `width:${sz}px;height:${sz}px;background:${c};` +
+        `left:${10+i*25}%;top:${15+i*18}%;` +
+        `animation-delay:${i*1.4}s;animation-duration:${5+i*1.2}s;`;
+      container.appendChild(g);
+    });
+  }
+
+  function _addParticles(container) {
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('div');
+      p.className = 'tbg-particle';
+      const sz = 2 + Math.random() * 3;
+      const colors = ['#c9922a','#f0c050','#ffffff','#8e44ad','#2980b9'];
+      const c = colors[Math.floor(Math.random() * colors.length)];
+      p.style.cssText = `
+        width:${sz}px;height:${sz}px;background:${c};
+        left:${Math.random()*100}%;
+        bottom:${Math.random()*40}%;
+        animation-duration:${4+Math.random()*6}s;
+        animation-delay:${Math.random()*6}s;
+        opacity:.5;
+      `;
+      container.appendChild(p);
+    }
+  }
+
+  function _addFog(container) {
+    for (let i = 0; i < 3; i++) {
+      const f = document.createElement('div');
+      f.className = 'tbg-fog';
+      f.style.cssText = `
+        width:${250+i*80}px;height:${120+i*40}px;
+        background:rgba(12,10,8,.35);
+        left:${i*30}%;bottom:${5+i*10}%;
+        animation-duration:${8+i*3}s;
+        animation-delay:${i*2.5}s;
+      `;
+      container.appendChild(f);
+    }
+  }
+
+  function _tick(now) {
+    if (!_running) return;
+    const ww = window.innerWidth;
+    const wh = window.innerHeight;
+
+    _slots.forEach(slot => {
+      const dur = parseFloat(slot.el.dataset.dur);
+      slot.el.dataset.t = parseFloat(slot.el.dataset.t) + 0.016; // ~60fps
+      const t = parseFloat(slot.el.dataset.t);
+      const progress = (t % dur) / dur; // 0→1 loop
+
+      // Opacity: fade in 0→0.15, hold 0.15→0.85, fade out 0.85→1
+      let opacity;
+      if (progress < 0.15) opacity = progress / 0.15;
+      else if (progress < 0.85) opacity = 1;
+      else opacity = 1 - (progress - 0.85) / 0.15;
+      opacity *= 0.72; // max opacity
+
+      // Slow drift — sinusoidal Y movement
+      const xBase = parseFloat(slot.el.dataset.x);
+      const yBase = parseFloat(slot.el.dataset.y);
+      const driftY = Math.sin(t * 0.3) * 0.025;
+      const driftX = Math.cos(t * 0.2) * 0.012;
+
+      const x = (xBase + driftX) * ww - 55; // center of 110px card
+      const y = (yBase + driftY) * wh - 77; // center of 155px card
+
+      const rot = parseFloat(slot.el.dataset.rot) + Math.sin(t * 0.25) * 3;
+      const scale = parseFloat(slot.el.dataset.scale) + Math.sin(t * 0.4) * 0.03;
+
+      slot.el.style.opacity = opacity;
+      slot.el.style.transform = `translate(${x}px,${y}px) rotate(${rot}deg) scale(${scale})`;
+    });
+
+    _raf = requestAnimationFrame(_tick);
+  }
+
+  function _init() {
+    const container = document.getElementById('title-bg');
+    if (!container) return;
+
+    // Move title-bg inside #title
+    const titleEl = document.getElementById('title');
+    if (titleEl && !titleEl.contains(container)) {
+      titleEl.insertBefore(container, titleEl.firstChild);
+    }
+
+    _addGlows(container);
+    _addFog(container);
+    _addParticles(container);
+
+    // Create card slots — scatter across screen
+    const count = Math.min(CARDS.length, 10);
+    for (let i = 0; i < count; i++) {
+      const el = _makeSlot(container, i, count);
+      _slots.push({ el });
+    }
+  }
+
+  function start() {
+    if (_running) return;
+    _running = true;
+    if (!_slots.length) _init();
+    _raf = requestAnimationFrame(_tick);
+  }
+
+  function stop() {
+    _running = false;
+    if (_raf) { cancelAnimationFrame(_raf); _raf = null; }
+  }
+
+  // Hook into screen transitions
+  // Watch #title visibility
+  const _titleEl = document.getElementById('title');
+  if (_titleEl) {
+    const obs = new MutationObserver(() => {
+      if (_titleEl.classList.contains('active')) start();
+      else stop();
+    });
+    obs.observe(_titleEl, { attributes: true, attributeFilter: ['class'] });
+    if (_titleEl.classList.contains('active')) start();
+  }
+})();
+
+// ════════════════════════════════════════════════════════════
+// ZONE BACKGROUND — CSS gradient canvas per zone
+// ════════════════════════════════════════════════════════════
+(function ZoneBgSystem() {
+  const ZONE_THEMES = {
+    forest: {
+      sky:    ['#0a1f08','#0d2b0a','#112e0d'],
+      layers: [
+        { color:'#0a1a08', opacity:.9  },
+        { color:'#0d2208', opacity:.75 },
+        { color:'#122808', opacity:.55 },
+      ],
+      treeLine: { color:'#071505', count:22, hRange:[0.35,0.65] },
+      particles:{ color:'#a8ff78', count:20, glow:true },
+      fog:      { color:'rgba(180,220,140,.04)', opacity:.5 },
+      accent:   '#27ae60',
+    },
+    swamp: {
+      sky:    ['#060e08','#081208','#0a1a0a'],
+      layers: [
+        { color:'#040e06', opacity:.9  },
+        { color:'#061408', opacity:.75 },
+        { color:'#091808', opacity:.55 },
+      ],
+      treeLine: { color:'#030a04', count:18, hRange:[0.4,0.7] },
+      particles:{ color:'#7fff44', count:25, glow:true },
+      fog:      { color:'rgba(100,180,80,.06)', opacity:.6 },
+      accent:   '#1abc9c',
+    },
+    catacombs: {
+      sky:    ['#030306','#060510','#080815'],
+      layers: [
+        { color:'#040408', opacity:.95 },
+        { color:'#08080f', opacity:.8  },
+        { color:'#0c0c18', opacity:.6  },
+      ],
+      treeLine: { color:'#020210', count:8, hRange:[0.5,0.75], pillars:true },
+      particles:{ color:'#6666ff', count:15, glow:true },
+      fog:      { color:'rgba(80,80,200,.05)', opacity:.55 },
+      accent:   '#6c5ce7',
+    },
+    cemetery: {
+      sky:    ['#060408','#0a0710','#120b18'],
+      layers: [
+        { color:'#06040a', opacity:.95 },
+        { color:'#0a0810', opacity:.8  },
+        { color:'#0d0a14', opacity:.6  },
+      ],
+      treeLine: { color:'#030208', count:14, hRange:[0.4,0.65] },
+      particles:{ color:'#cc88ff', count:18, glow:true },
+      fog:      { color:'rgba(120,80,180,.06)', opacity:.65 },
+      accent:   '#8e44ad',
+    },
+    desert: {
+      sky:    ['#1a0e04','#220e02','#2a1204'],
+      layers: [
+        { color:'#150a02', opacity:.9  },
+        { color:'#1e0e04', opacity:.75 },
+        { color:'#281204', opacity:.55 },
+      ],
+      treeLine: { color:'#0e0802', count:6, hRange:[0.55,0.75], dunes:true },
+      particles:{ color:'#ffcc44', count:12, glow:false },
+      fog:      { color:'rgba(200,150,60,.06)', opacity:.4  },
+      accent:   '#e67e22',
+    },
+    lostcity: {
+      sky:    ['#0a0808','#100c0a','#160e08'],
+      layers: [
+        { color:'#080606', opacity:.92 },
+        { color:'#100a08', opacity:.78 },
+        { color:'#160e08', opacity:.58 },
+      ],
+      treeLine: { color:'#060404', count:10, hRange:[0.38,0.62], ruins:true },
+      particles:{ color:'#ff9944', count:16, glow:true },
+      fog:      { color:'rgba(150,100,50,.06)', opacity:.5 },
+      accent:   '#d35400',
+    },
+    ravine: {
+      sky:    ['#020206','#040408','#06060e'],
+      layers: [
+        { color:'#020206', opacity:.97 },
+        { color:'#040408', opacity:.85 },
+        { color:'#06060e', opacity:.65 },
+      ],
+      treeLine: { color:'#010108', count:12, hRange:[0.45,0.7] },
+      particles:{ color:'#4466ff', count:14, glow:true },
+      fog:      { color:'rgba(40,40,120,.08)', opacity:.7 },
+      accent:   '#2c3e50',
+    },
+    volcano: {
+      sky:    ['#1a0402','#220602','#2e0802'],
+      layers: [
+        { color:'#120200', opacity:.92 },
+        { color:'#1e0402', opacity:.78 },
+        { color:'#280602', opacity:.58 },
+      ],
+      treeLine: { color:'#0e0200', count:8, hRange:[0.5,0.72], volcano:true },
+      particles:{ color:'#ff4400', count:30, glow:true },
+      fog:      { color:'rgba(200,60,20,.07)', opacity:.55 },
+      accent:   '#e74c3c',
+    },
+    tundra: {
+      sky:    ['#060c14','#081018','#0c1820'],
+      layers: [
+        { color:'#060c14', opacity:.92 },
+        { color:'#081018', opacity:.78 },
+        { color:'#0e1822', opacity:.58 },
+      ],
+      treeLine: { color:'#040810', count:16, hRange:[0.42,0.65] },
+      particles:{ color:'#88ccff', count:28, glow:false },
+      fog:      { color:'rgba(120,170,220,.07)', opacity:.6 },
+      accent:   '#3498db',
+    },
+    abyss: {
+      sky:    ['#000000','#010103','#020204'],
+      layers: [
+        { color:'#000000', opacity:.98 },
+        { color:'#010104', opacity:.88 },
+        { color:'#020206', opacity:.7  },
+      ],
+      treeLine: { color:'#000002', count:6, hRange:[0.55,0.8] },
+      particles:{ color:'#ff0044', count:20, glow:true },
+      fog:      { color:'rgba(80,0,80,.1)', opacity:.8 },
+      accent:   '#c0392b',
+    },
+  };
+
+  const _canvas = document.getElementById('zone-bg-canvas');
+  const _wrap   = document.getElementById('zone-bg');
+  if (!_canvas || !_wrap) return;
+  const ctx = _canvas.getContext('2d');
+
+  let _currentZone = null;
+  let _particles = [];
+  let _raf = null;
+  let _t = 0;
+  let _targetOpacity = 0;
+  let _opacity = 0;
+  let _activeScreen = false;
+
+  const GAME_SCREENS = new Set(['game','hero-tab','inv-tab','npc-tab','map-tab','raid-tab','gather-tab']);
+
+  function _resize() {
+    _canvas.width  = window.innerWidth;
+    _canvas.height = window.innerHeight;
+  }
+
+  function _hexToRgb(hex) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return [r,g,b];
+  }
+
+  function _buildParticles(theme) {
+    _particles = [];
+    const pt = theme.particles;
+    const [r,g,b] = _hexToRgb(pt.color.length===7 ? pt.color : '#ffffff');
+    for (let i = 0; i < pt.count; i++) {
+      _particles.push({
+        x:    Math.random() * _canvas.width,
+        y:    Math.random() * _canvas.height,
+        vy:   -(0.2 + Math.random() * 0.5),
+        vx:   (Math.random() - 0.5) * 0.3,
+        size: 1 + Math.random() * 2.5,
+        life: Math.random(),
+        speed: 0.003 + Math.random() * 0.004,
+        r, g, b,
+        glow: pt.glow,
+      });
+    }
+  }
+
+  function _drawBackground(theme) {
+    const W = _canvas.width, H = _canvas.height;
+    // Sky gradient
+    const skGrad = ctx.createLinearGradient(0,0,0,H);
+    skGrad.addColorStop(0,   theme.sky[0]);
+    skGrad.addColorStop(0.5, theme.sky[1]);
+    skGrad.addColorStop(1,   theme.sky[2]);
+    ctx.fillStyle = skGrad;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  function _drawFog(theme, alpha) {
+    const W = _canvas.width, H = _canvas.height;
+    // Animated fog bands
+    for (let i = 0; i < 3; i++) {
+      const y = H * (0.55 + i * 0.12) + Math.sin(_t * 0.4 + i * 2) * 8;
+      const h = H * (0.12 + i * 0.04);
+      const fogGrad = ctx.createLinearGradient(0, y, 0, y + h);
+      fogGrad.addColorStop(0, 'transparent');
+      fogGrad.addColorStop(0.3, theme.fog.color);
+      fogGrad.addColorStop(0.7, theme.fog.color);
+      fogGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = fogGrad;
+      ctx.globalAlpha = theme.fog.opacity * alpha;
+      ctx.fillRect(0, y, W, h);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function _drawTreeLine(theme, alpha) {
+    const W = _canvas.width, H = _canvas.height;
+    const tl = theme.treeLine;
+    ctx.fillStyle = tl.color;
+    ctx.globalAlpha = alpha * 0.85;
+
+    if (tl.pillars) {
+      // Catacombs pillars
+      for (let i = 0; i < tl.count; i++) {
+        const x = (i / tl.count) * W + (Math.sin(i*1.7)*0.04*W);
+        const h = H * (0.35 + Math.sin(i*0.9)*0.1);
+        const w = W * 0.025;
+        ctx.fillRect(x - w/2, H - h, w, h);
+        // pillar top
+        ctx.fillRect(x - w*0.7, H - h - w*0.4, w*1.4, w*0.4);
+      }
+    } else if (tl.dunes) {
+      // Desert dunes
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      for (let x = 0; x <= W; x += 4) {
+        const y = H * (tl.hRange[0] + (tl.hRange[1]-tl.hRange[0])*0.5)
+                  + Math.sin(x * 0.008 + _t*0.1) * H * 0.06
+                  + Math.sin(x * 0.02 + _t*0.05) * H * 0.025;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      ctx.fill();
+    } else if (tl.ruins) {
+      // Lost city ruins
+      for (let i = 0; i < tl.count; i++) {
+        const x = (i / tl.count) * W;
+        const baseH = H * (tl.hRange[0] + Math.random()*0.02 + (i%3)*0.04);
+        const w = W * (0.04 + (i%3)*0.02);
+        ctx.fillRect(x, H - baseH, w, baseH);
+        // crumbled top
+        if (i%2===0) {
+          ctx.fillRect(x + w*0.6, H - baseH - w*0.3, w*0.4, w*0.3);
+        }
+      }
+    } else if (tl.volcano) {
+      // Volcano silhouette
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      ctx.lineTo(W*0.15, H*tl.hRange[1]);
+      ctx.lineTo(W*0.35, H*0.3);
+      ctx.lineTo(W*0.5, H*0.22);
+      ctx.lineTo(W*0.65, H*0.3);
+      ctx.lineTo(W*0.82, H*tl.hRange[1]);
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      ctx.fill();
+      // Lava glow at top
+      const lavaGrad = ctx.createRadialGradient(W*0.5, H*0.22, 0, W*0.5, H*0.22, W*0.15);
+      lavaGrad.addColorStop(0, 'rgba(255,80,0,.35)');
+      lavaGrad.addColorStop(1, 'transparent');
+      ctx.globalAlpha = alpha * 0.6;
+      ctx.fillStyle = lavaGrad;
+      ctx.fillRect(W*0.3, 0, W*0.4, H*0.45);
+    } else {
+      // Generic tree silhouettes
+      for (let i = 0; i < tl.count; i++) {
+        const xf = (i / (tl.count-1)) + (Math.sin(i*2.3)*0.04);
+        const x = xf * W;
+        const baseH = H * (tl.hRange[0] + Math.sin(i*0.8)*( (tl.hRange[1]-tl.hRange[0])*0.4 ) + (tl.hRange[1]-tl.hRange[0])*0.3);
+        const trunkW = W * 0.012;
+        const trunkH = baseH * 0.35;
+        // trunk
+        ctx.fillRect(x - trunkW/2, H - trunkH, trunkW, trunkH);
+        // canopy layers
+        for (let j = 0; j < 3; j++) {
+          const cy = H - trunkH - j * baseH * 0.18;
+          const cw = (W * 0.055) * (1 - j*0.2);
+          ctx.beginPath();
+          ctx.moveTo(x, cy - baseH*0.28);
+          ctx.lineTo(x + cw, cy + baseH*0.1);
+          ctx.lineTo(x - cw, cy + baseH*0.1);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function _drawParticles(alpha) {
+    _particles.forEach(p => {
+      p.life += p.speed;
+      if (p.life > 1) {
+        p.life = 0;
+        p.x = Math.random() * _canvas.width;
+        p.y = _canvas.height * (0.5 + Math.random() * 0.5);
+      }
+      p.x += p.vx;
+      p.y += p.vy;
+
+      const a = Math.sin(p.life * Math.PI) * alpha * 0.65;
+      if (p.glow) {
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size*3);
+        g.addColorStop(0, `rgba(${p.r},${p.g},${p.b},${a})`);
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size*3, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${a})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+
+  function _drawAccentGlow(theme, alpha) {
+    const W = _canvas.width, H = _canvas.height;
+    const [r,g,b] = _hexToRgb(theme.accent);
+    // Bottom glow strip
+    const grd = ctx.createLinearGradient(0, H*0.7, 0, H);
+    grd.addColorStop(0, 'transparent');
+    grd.addColorStop(1, `rgba(${r},${g},${b},${0.08 * alpha})`);
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, H*0.7, W, H*0.3);
+  }
+
+  function _draw() {
+    if (!_currentZone) return;
+    const theme = ZONE_THEMES[_currentZone] || ZONE_THEMES.forest;
+    const W = _canvas.width, H = _canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    _drawBackground(theme);
+    _drawFog(theme, 1);
+    _drawTreeLine(theme, 1);
+    _drawParticles(1);
+    _drawAccentGlow(theme, 1);
+  }
+
+  function _tick() {
+    _t += 0.016;
+
+    // Opacity animation via canvas globalAlpha proxy — wrap opacity
+    const diff = _targetOpacity - _opacity;
+    _opacity += diff * 0.05;
+    _canvas.style.opacity = _opacity.toFixed(3);
+
+    if (_opacity > 0.005) {
+      _draw();
+    }
+
+    _raf = requestAnimationFrame(_tick);
+  }
+
+  function setZone(zoneId) {
+    const theme = ZONE_THEMES[zoneId] || ZONE_THEMES.forest;
+    if (_currentZone !== zoneId) {
+      _currentZone = zoneId;
+      _buildParticles(theme);
+    }
+  }
+
+  function show() {
+    _targetOpacity = 1;
+    _activeScreen = true;
+  }
+
+  function hide() {
+    _targetOpacity = 0;
+    _activeScreen = false;
+  }
+
+  // Init
+  _resize();
+  window.addEventListener('resize', _resize, { passive:true });
+  _raf = requestAnimationFrame(_tick);
+
+  // Listen to zone changes
+  if (typeof EventBus !== 'undefined') {
+    EventBus.on('zone:changed', (zone) => {
+      setZone(zone?.id || 'forest');
+    });
+  }
+
+  // Watch game screen visibility via MutationObserver
+  function _watchScreens() {
+    const gameScreens = ['game','hero-tab','inv-tab','npc-tab','map-tab','raid-tab','gather-tab'];
+    const titleEl = document.getElementById('title');
+
+    const checkActive = () => {
+      const anyGame = gameScreens.some(id => {
+        const el = document.getElementById(id);
+        return el && el.classList.contains('active');
+      });
+      if (anyGame) {
+        // Set zone from State if available
+        if (typeof State !== 'undefined' && State.zone?.id) {
+          setZone(State.zone.id);
+        } else if (!_currentZone) {
+          setZone('forest');
+        }
+        show();
+      } else {
+        hide();
+      }
+    };
+
+    // Observe document body for class changes on screens
+    const obs = new MutationObserver(checkActive);
+    obs.observe(document.body, { subtree:true, attributes:true, attributeFilter:['class'] });
+    checkActive();
+  }
+
+  // Delay to let DOM settle after boot
+  setTimeout(_watchScreens, 200);
+})();
+</script>
+</script>
+
+<!-- MEDAL DETAIL POPUP -->
+<div id="medal-popup-ov">
+  <div id="medal-popup-box"></div>
+</div>
+
+</body>
+</html>
